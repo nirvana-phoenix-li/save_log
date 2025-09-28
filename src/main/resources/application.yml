@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/important?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456.l
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  redis:
+    host: redis-fzmw-sit-c.mid.io
+    port: 6379
+    password: XHNSY2PiBp76htgrs54wKoCeqynbgtrd  # 如果没有密码可以省略
+    database: 0
+    timeout: 3000ms
+    cluster:
+      nodes:
+        - 10.228.109.166:6379
+        - 10.228.109.167:6379
+        - 10.228.109.168:6379
+      max-redirects: 3
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: -1ms
+        max-idle: 8
+        min-idle: 0
