@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -105,7 +107,7 @@ public class OrdersLogService {
         HashMap<String, Set<String>> hashMap = new HashMap<>();
         //实际查询时间是 8个小时之后，有时差
         int stepSecond = 30;
-        LocalDateTime originalStart = LocalDateTime.of(2025, 9, 28, 10, 20, 0, 0);
+        LocalDateTime originalStart = LocalDateTime.of(2025, 10, 11, 1, 25, 0, 0);
         LocalDateTime originalEnd = originalStart.plusSeconds(stepSecond);
 
         int requestCount = 0;
@@ -192,6 +194,7 @@ public class OrdersLogService {
                 }
                 invertedDbMapper.insert(invertedDbs);
 
+                //判断同收货大地址同skucode的逻辑
                 if (Integer.valueOf(responseInfo.get("riskLevel")) != 2) {
                     for (String skuCode : skuCodes) {
                         if (!skuCode.equals("null")) {
@@ -200,6 +203,12 @@ public class OrdersLogService {
                             postHandler(sceneCode, currentValue, ordersLog, skuCode);
                         }
                     }
+                }
+
+                //判断同收货小地址是否包含手机号的逻辑
+                String phoneNumber = findPhoneNumber(ordersLog.getReceiverAddr());
+                if (!phoneNumber.isEmpty() && !phoneNumber.equals(ordersLog.getMobile())) {
+                    handlerReceiveAddrContainsPhone(ordersLog);
                 }
 
                 ordersLog.setRiskLevel(Integer.valueOf(responseInfo.get("riskLevel")));
@@ -234,6 +243,18 @@ public class OrdersLogService {
         }
     }
 
+    //处理
+    private void handlerReceiveAddrContainsPhone(OrdersLog ordersLog) {
+        String alertString = "收货大地址:" + ordersLog.getReceiverArea() +
+                "收货小地址:" + ordersLog.getReceiverAddr() + "包含手机号!"
+                + "且与注册手机号不一致，订单id为" + ordersLog.getOrderId();
+        try {
+            sendMessage(alertString);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public String sendMessage(String alertString) throws Exception {
         String json = "{\"msgtype\": \"text\", \"text\": {\"content\": \"" + alertString + "\"}}";
 
@@ -251,6 +272,18 @@ public class OrdersLogService {
             return response.body().string();
         }
     }
+
+    public String findPhoneNumber(String paramString) {
+        String mobile = "";
+        Pattern pattern = Pattern.compile("(?<!\\d)(?:(?:1[3456789]\\d{9})|(?:861[3456789]\\d{9}))(?!\\d)");
+        Matcher matcher = pattern.matcher(paramString.replaceAll("\\s*", ""));
+        while (matcher.find()) {
+            mobile = matcher.group();
+            mobile = mobile.startsWith("86") ? mobile.substring(2) : mobile;
+        }
+        return mobile;
+    }
+
 
     /**
      * 调用ElasticSearch API的方法
