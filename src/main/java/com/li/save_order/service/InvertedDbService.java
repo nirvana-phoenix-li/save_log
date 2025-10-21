@@ -14,20 +14,11 @@ import java.util.List;
 public class InvertedDbService {
     @Autowired
     InvertedDbMapper invertedDbMapper;
-
     @Autowired
     GeneralLongTermCountCacheManager countCacheManager;
 
     public void executor() {
-
-
-
         List<OrdersLog> ordersLogs = new ArrayList<>();
-
-
-       
-
-
         for (OrdersLog ordersLog : ordersLogs) {
             String receiverArea = ordersLog.getReceiverArea();
             String receiverAddr = ordersLog.getReceiverAddr();
