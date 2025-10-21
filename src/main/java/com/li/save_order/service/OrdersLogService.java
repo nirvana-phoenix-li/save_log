@@ -107,7 +107,7 @@ public class OrdersLogService {
         HashMap<String, Set<String>> hashMap = new HashMap<>();
         //实际查询时间是 8个小时之后，有时差
         int stepSecond = 30;
-        LocalDateTime originalStart = LocalDateTime.of(2025, 10, 11, 1, 25, 0, 0);
+        LocalDateTime originalStart = LocalDateTime.of(2025, 10, 21, 6, 25, 0, 0);
         LocalDateTime originalEnd = originalStart.plusSeconds(stepSecond);
 
         int requestCount = 0;
