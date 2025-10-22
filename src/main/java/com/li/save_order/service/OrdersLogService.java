@@ -1,11 +1,14 @@
 package com.li.save_order.service;
 
+import com.li.save_order.entity.OrdersLog;
+import com.li.save_order.mapper.OrdersLogMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 
 @Service
 public class OrdersLogService {
@@ -13,6 +16,10 @@ public class OrdersLogService {
     ParseLogStructService parseLogStructService;
     @Autowired
     NetWorkService netWorkService;
+    @Autowired
+    DisposalService disposalService;
+    @Autowired
+    OrdersLogMapper ordersLogMapper;
 
 
     public void executor(int number) throws IOException, InterruptedException {
@@ -35,7 +42,12 @@ public class OrdersLogService {
             }
             System.out.println("当前为第" + k + "次，重试次数为: " + (redo - 1));
             System.out.println("API响应长度: " + response.length());
-            parseLogStructService.parseContentSimple(response);
+            List<OrdersLog> ordersLogs = parseLogStructService.parseContentSimple(response);
+            for (OrdersLog ordersLog : ordersLogs) {
+                disposalService.dealWithAllWork(ordersLog);
+                ordersLogMapper.insert(ordersLog);
+            }
+
             originalStart = originalStart.plusSeconds(stepSecond);
             originalEnd = originalEnd.plusSeconds(stepSecond);
             Thread.sleep(stepSecond * 1000);
@@ -62,7 +74,8 @@ public class OrdersLogService {
         }
         System.out.println("当前重试次数为: " + (redo - 1));
         System.out.println("API响应长度: " + response.length());
-        parseLogStructService.parseContentSimple(response);
+        List<OrdersLog> ordersLogs = parseLogStructService.parseContentSimple(response);
+
         originalStart = originalStart.plusSeconds(stepSecond);
         originalEnd = originalEnd.plusSeconds(stepSecond);
 

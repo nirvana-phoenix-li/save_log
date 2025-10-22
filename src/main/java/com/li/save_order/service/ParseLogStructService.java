@@ -4,22 +4,16 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.li.save_order.entity.OrdersLog;
-import com.li.save_order.mapper.OrdersLogMapper;
 import com.li.save_order.mapstruct.OrdersLogStruct;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class ParseLogStructService {
-    @Autowired
-    DisposalService disposalService;
-    @Autowired
-    OrdersLogMapper ordersLogMapper;
+
     @Autowired
     OrdersLogStruct ordersLogStruct;
 
@@ -87,15 +81,16 @@ public class ParseLogStructService {
         return firstString + secondString + thirdString;
     }
 
-    public void parseContentSimple(String log) {
+    public List<OrdersLog> parseContentSimple(String log) {
         JSONObject jsonObject = JSON.parseObject(log);
         JSONObject rawResponse = jsonObject.getJSONObject("rawResponse");
         JSONObject hits = rawResponse.getJSONObject("hits");
         JSONArray innerHits = hits.getJSONArray("hits");
 
+
+        ArrayList<OrdersLog> ordersLogs = new ArrayList<>();
         for (Object innerHit : innerHits) {
             try {
-
                 JSONObject findIt = (JSONObject) innerHit;
                 String findItString = findIt.toString();
                 // 移除转义字符
@@ -118,27 +113,25 @@ public class ParseLogStructService {
                     throw new IllegalArgumentException("content字段结束位置未找到");
                 }
 
-                String singalString = fixWithRegex(endParts[0]+"}");
+                String singalString = fixWithRegex(endParts[0] + "}");
                 JSONObject treasure = JSON.parseObject(singalString);
                 OrdersLog ordersLog = JSONObject.parseObject(singalString, OrdersLog.class);
 
                 //设置content之前的内容
                 String[] contentBefore = parts[1].split("\\{");
                 String beforeString = contentBefore[contentBefore.length - 1];
-                if (beforeString != null&&beforeString.endsWith("\",")) {
-                    beforeString="{"+beforeString.substring(0,beforeString.length()-1)+"}";
+                if (beforeString != null && beforeString.endsWith("\",")) {
+                    beforeString = "{" + beforeString.substring(0, beforeString.length() - 1) + "}";
                 }
                 OrdersLog beforeTreasure = JSONObject.parseObject(beforeString, OrdersLog.class);
                 ordersLogStruct.updateUserFromDto(beforeTreasure, ordersLog);
-//                BeanUtils.copyProperties(beforeTreasure, ordersLog);
 
                 //设置content之后的内容
                 String[] contentLater = endParts[1].split("}");
                 String laterString = contentLater[0];
-                laterString="{\""+laterString+"}";
+                laterString = "{\"" + laterString + "}";
                 OrdersLog laterTreasure = JSONObject.parseObject(laterString, OrdersLog.class);
                 ordersLogStruct.updateUserFromDto(laterTreasure, ordersLog);
-                BeanUtils.copyProperties(laterTreasure, ordersLog);
 
 
                 ordersLog.setRiskLevel(Integer.valueOf(responseInfo.get("riskLevel")));
@@ -146,13 +139,14 @@ public class ParseLogStructService {
                 ordersLog.setRiskCode(Integer.valueOf(responseInfo.get("riskCode")));
                 ordersLog.setRiskMsg(responseInfo.get("riskMsg"));
                 ordersLog.setTid(responseInfo.get("tid"));
-                disposalService.dealWithAllWork(ordersLog);
-                ordersLogMapper.insert(ordersLog);
+
+                ordersLogs.add(ordersLog);
                 System.out.println("---------------------------------------------------------change line---------------------------------------------------------------------");
                 System.out.println(treasure.toString());
             } catch (Exception e) {
                 System.out.println("保存数据库时出现错误" + Arrays.toString(e.getStackTrace()));
             }
         }
+        return ordersLogs;
     }
 }
