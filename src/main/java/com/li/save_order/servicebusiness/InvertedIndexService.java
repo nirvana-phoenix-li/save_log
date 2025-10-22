@@ -15,6 +15,10 @@ public class InvertedIndexService {
 
     public void saveInvertedIndex(OrdersLog ordersLog) {
         //处理收货小地址倒排索引
+        if (ordersLog.getReceiverAddr()==null){
+            return;
+        }
+
         ArrayList<InvertedDb> invertedDbs = new ArrayList<>();
         for (int i = 0; i < ordersLog.getReceiverAddr().length(); i++) {
             char c = ordersLog.getReceiverAddr().charAt(i);

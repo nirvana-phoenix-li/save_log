@@ -134,6 +134,19 @@ public class OrdersLog {
     @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updated_at;
 
+    @TableField(value = "businessType")
+    private String businessType;
+
+    @TableField(value = "commercialId")
+    private String commercialId;
+
+    @TableField(value = "resourceType")
+    private String resourceType;
+
+    @TableField(value = "sceneType")
+    private String sceneType;
+
+
 }
 
 

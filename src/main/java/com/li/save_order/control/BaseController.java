@@ -6,6 +6,7 @@ import com.li.save_order.utils.RedisService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.io.IOException;
@@ -29,9 +30,6 @@ public class BaseController {
     public String hello() {
         System.out.println("hello springboot!");
         try {
-            redisService.set("test", "mytest");
-            String test = (String) redisService.get("test");
-            System.out.println(test);
             ordersLogService.executor(10000);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -45,10 +43,24 @@ public class BaseController {
     @RequestMapping("/featureInvert")
     @ResponseBody
     public String featureInvert() {
-
-
         invertedDbService.executor();
         return "hello springboot!";
+    }
+
+    @RequestMapping("/getMemberRoute")
+    @ResponseBody
+    public String getMemberRoute(@RequestParam String memberId,
+                                 @RequestParam Integer year,
+                                 @RequestParam Integer month,
+                                 @RequestParam Integer day,
+                                 @RequestParam Integer hour,
+                                 @RequestParam Integer minute) {
+        try {
+            ordersLogService.getMemberRoute(memberId, year, month, day, hour, minute);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return "getMemberRoute success!";
     }
 }
 
