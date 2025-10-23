@@ -75,7 +75,20 @@ public class OrdersLogService {
         originalEnd = originalEnd.minusHours(8);
         LocalDateTime originalStart = originalEnd.minusSeconds(beforeSeconds);
 
+//        queryAndSave(originalStart, originalEnd, stringHashMap);
 
+
+        stringHashMap = new HashMap<>();
+        stringHashMap.put("进入浏览反爬风控", "");
+        stringHashMap.put("结束", "and");
+        stringHashMap.put(memberId, "");
+
+        queryAndSave(originalStart, originalEnd, stringHashMap);
+
+        System.out.println("循环结束");
+    }
+
+    private void queryAndSave(LocalDateTime originalStart, LocalDateTime originalEnd, HashMap<String, String> stringHashMap) throws IOException {
         String response = null;
         int redo = 0;
         while (response == null || response.startsWith("{\"id\"")) {
@@ -86,6 +99,21 @@ public class OrdersLogService {
         System.out.println("API响应长度: " + response.length());
         List<OrdersLog> ordersLogs = parseLogStructService.parseContentSimple(response);
         for (OrdersLog ordersLog : ordersLogs) {
+            //如果是反爬
+            if ("skudetail".equals(ordersLog.getSceneType())
+                    || "search".equals(ordersLog.getSceneType())
+                    || "webSeckill".equals(ordersLog.getSceneType())
+                    || "category".equals(ordersLog.getSceneType())
+            ) {
+                MemberTrace memberTrace = new MemberTrace();
+                memberTrace.setStrategyId(ordersLog.getSceneType());
+                memberTrace.setRequestTime(ordersLog.getDateTime());
+                memberTrace.setMemberId(ordersLog.getMemberId());
+                memberTrace.setMobile(ordersLog.getMobile());
+                memberTraceMapper.insert(memberTrace);
+                continue;
+            }
+
             //补全订单场景的数据
             if ("order".equals(ordersLog.getSceneType())) {
                 if (ordersLog.getCouponCode() != null) {
@@ -125,7 +153,7 @@ public class OrdersLogService {
             //第二次查询
             selectOne = yhRiskEngineTetradMapper.selectOne(cloneWrapper);
 
-            if (selectOne.getStrategyId() != null) {
+            if (selectOne != null && selectOne.getStrategyId() != null) {
                 MemberTrace memberTrace = new MemberTrace();
                 memberTrace.setStrategyId(String.valueOf(selectOne.getStrategyId()));
                 memberTrace.setRequestTime(ordersLog.getDateTime());
@@ -134,8 +162,6 @@ public class OrdersLogService {
                 memberTraceMapper.insert(memberTrace);
             }
         }
-
-        System.out.println("循环结束");
     }
 
 

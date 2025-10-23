@@ -5,7 +5,6 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.li.save_order.entity.OrdersLog;
 import com.li.save_order.mapstruct.OrdersLogStruct;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -115,9 +114,14 @@ public class ParseLogStructService {
                     throw new IllegalArgumentException("content字段结束位置未找到");
                 }
 
-                String singalString = fixWithRegex(endParts[0] + "}");
-                JSONObject treasure = JSON.parseObject(singalString);
-                OrdersLog ordersLog = JSONObject.parseObject(singalString, OrdersLog.class);
+                String content = endParts[0] + "}";
+                OrdersLog ordersLog;
+                try {
+                    ordersLog = JSONObject.parseObject(content, OrdersLog.class);
+                } catch (Exception e) {
+                    String singalString = fixWithRegex(content);
+                    ordersLog = JSONObject.parseObject(singalString, OrdersLog.class);
+                }
 
                 //设置content之前的内容
                 String[] contentBefore = parts[1].split("\\{");
@@ -125,8 +129,16 @@ public class ParseLogStructService {
                 if (beforeString != null && beforeString.endsWith("\",")) {
                     beforeString = "{" + beforeString.substring(0, beforeString.length() - 1) + "}";
                 }
-                OrdersLog beforeTreasure = JSONObject.parseObject(beforeString, OrdersLog.class);
-                ordersLogStruct.updateUserFromDto(beforeTreasure, ordersLog);
+
+                //反爬不适配
+                if ("skudetail".equals(ordersLog.getSceneType())
+                        || "search".equals(ordersLog.getSceneType())
+                        || "webSeckill".equals(ordersLog.getSceneType())
+                        || "category".equals(ordersLog.getSceneType())) {
+                } else {
+                    OrdersLog beforeTreasure = JSONObject.parseObject(beforeString, OrdersLog.class);
+                    ordersLogStruct.updateUserFromDto(beforeTreasure, ordersLog);
+                }
 
                 //设置content之后的内容
                 String[] contentLater = endParts[1].split("}");
@@ -151,7 +163,8 @@ public class ParseLogStructService {
 
                 ordersLogs.add(ordersLog);
                 System.out.println("---------------------------------------------------------change line---------------------------------------------------------------------");
-                System.out.println(treasure.toString());
+                System.out.println(ordersLog);
+//                System.out.println(treasure.toString());
             } catch (Exception e) {
                 System.out.println("保存数据库时出现错误" + Arrays.toString(e.getStackTrace()));
             }
