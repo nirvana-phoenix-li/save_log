@@ -2,8 +2,10 @@ package com.li.save_order.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.li.save_order.entity.MemberTrace;
 import com.li.save_order.entity.OrdersLog;
 import com.li.save_order.entity.YhRiskEngineTetrad;
+import com.li.save_order.mapper.MemberTraceMapper;
 import com.li.save_order.mapper.OrdersLogMapper;
 import com.li.save_order.mapper.YhRiskEngineTetradMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +26,8 @@ public class OrdersLogService {
     DisposalService disposalService;
     @Autowired
     OrdersLogMapper ordersLogMapper;
+    @Autowired
+    MemberTraceMapper memberTraceMapper;
     @Autowired
     YhRiskEngineTetradMapper yhRiskEngineTetradMapper;
 
@@ -61,16 +65,16 @@ public class OrdersLogService {
         System.out.println("循环结束");
     }
 
-    public void getMemberRoute(String memberId, Integer year, Integer month, Integer day, Integer hour, Integer minute) throws IOException {
+    public void saveMemberRoute(String memberId, Integer year, Integer month, Integer day, Integer hour, Integer minute, Long beforeSeconds) throws IOException {
         HashMap<String, String> stringHashMap = new HashMap<>();
         stringHashMap.put("进入风控V2.0", "");
         stringHashMap.put("结束", "and");
         stringHashMap.put(memberId, "");
         stringHashMap.put("order", "");
         //实际查询时间是 8个小时之后，有时差
-        int stepSecond = 7200;
-        LocalDateTime originalStart = LocalDateTime.of(year, month, day, hour, minute, 0, 0);
-        LocalDateTime originalEnd = originalStart.plusSeconds(stepSecond);
+        LocalDateTime originalEnd = LocalDateTime.of(year, month, day, hour, minute, 0, 0);
+        LocalDateTime originalStart = originalEnd.minusSeconds(beforeSeconds);
+
 
         String response = null;
         int redo = 0;
@@ -86,9 +90,9 @@ public class OrdersLogService {
             if ("order".equals(ordersLog.getSceneType())) {
                 if (ordersLog.getCouponCode() != null) {
                     continue;
-                }else if (ordersLog.getIsBalancePay()){
+                } else if (ordersLog.getIsBalancePay()) {
                     ordersLog.setSceneType("sync-disposable-rule");
-                }else {
+                } else {
                     ordersLog.setSceneType("sync-part-rule");
                 }
             }
@@ -120,13 +124,51 @@ public class OrdersLogService {
 
             //第二次查询
             selectOne = yhRiskEngineTetradMapper.selectOne(cloneWrapper);
-            System.out.println(selectOne.getStrategyId());
-//            ordersLogMapper.insert(ordersLog);
+
+            if (selectOne.getStrategyId() != null) {
+                MemberTrace memberTrace = new MemberTrace();
+                memberTrace.setStrategyId(String.valueOf(selectOne.getStrategyId()));
+                memberTrace.setRequestTime(ordersLog.getDateTime());
+                memberTrace.setMemberId(ordersLog.getMemberId());
+                memberTrace.setMobile(ordersLog.getMobile());
+                memberTraceMapper.insert(memberTrace);
+            }
         }
-        originalStart = originalStart.plusSeconds(stepSecond);
-        originalEnd = originalEnd.plusSeconds(stepSecond);
+
         System.out.println("循环结束");
     }
 
+
+    public List<MemberTrace> getMemberTrace(String memberId, String mobile,
+                                            LocalDateTime startTime, LocalDateTime endTime) {
+
+        LambdaQueryWrapper<MemberTrace> queryWrapper = new LambdaQueryWrapper<MemberTrace>()
+                // 选择需要的字段
+                .select(MemberTrace::getStrategyId,
+                        MemberTrace::getRequestTime,
+                        MemberTrace::getMemberId,
+                        MemberTrace::getMobile)
+                // 按时间排序
+                .orderByAsc(MemberTrace::getRequestTime);
+
+        // 时间范围条件
+        if (startTime != null) {
+            queryWrapper.ge(MemberTrace::getRequestTime, startTime);
+        }
+        if (endTime != null) {
+            queryWrapper.le(MemberTrace::getRequestTime, endTime);
+        }
+
+        boolean hasMemberId = StringUtils.isNotBlank(memberId);
+        if (hasMemberId) {
+            queryWrapper.eq(MemberTrace::getMemberId, memberId);
+        }
+        boolean hasMobile = StringUtils.isNotBlank(mobile);
+        if (hasMobile) {
+            queryWrapper.eq(MemberTrace::getMobile, mobile);
+        }
+
+        return memberTraceMapper.selectList(queryWrapper);
+    }
 
 }
