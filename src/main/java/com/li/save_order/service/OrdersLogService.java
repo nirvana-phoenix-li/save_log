@@ -70,9 +70,9 @@ public class OrdersLogService {
         stringHashMap.put("进入风控V2.0", "");
         stringHashMap.put("结束", "and");
         stringHashMap.put(memberId, "");
-        stringHashMap.put("order", "");
-        //实际查询时间是 8个小时之后，有时差
         LocalDateTime originalEnd = LocalDateTime.of(year, month, day, hour, minute, 0, 0);
+        //实际查询时间是 8个小时之后，有时差
+        originalEnd = originalEnd.minusHours(8);
         LocalDateTime originalStart = originalEnd.minusSeconds(beforeSeconds);
 
 
