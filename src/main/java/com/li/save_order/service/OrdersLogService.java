@@ -75,7 +75,7 @@ public class OrdersLogService {
         originalEnd = originalEnd.minusHours(8);
         LocalDateTime originalStart = originalEnd.minusSeconds(beforeSeconds);
 
-//        queryAndSave(originalStart, originalEnd, stringHashMap);
+        queryAndSave(originalStart, originalEnd, stringHashMap);
 
 
         stringHashMap = new HashMap<>();
