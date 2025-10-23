@@ -1,7 +1,11 @@
 package com.li.save_order.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.li.save_order.entity.OrdersLog;
+import com.li.save_order.entity.YhRiskEngineTetrad;
 import com.li.save_order.mapper.OrdersLogMapper;
+import com.li.save_order.mapper.YhRiskEngineTetradMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +24,8 @@ public class OrdersLogService {
     DisposalService disposalService;
     @Autowired
     OrdersLogMapper ordersLogMapper;
+    @Autowired
+    YhRiskEngineTetradMapper yhRiskEngineTetradMapper;
 
 
     public void executor(int number) throws IOException, InterruptedException {
@@ -75,10 +81,50 @@ public class OrdersLogService {
         System.out.println("当前重试次数为: " + (redo - 1));
         System.out.println("API响应长度: " + response.length());
         List<OrdersLog> ordersLogs = parseLogStructService.parseContentSimple(response);
+        for (OrdersLog ordersLog : ordersLogs) {
+            //补全订单场景的数据
+            if ("order".equals(ordersLog.getSceneType())) {
+                if (ordersLog.getCouponCode() != null) {
+                    continue;
+                }else if (ordersLog.getIsBalancePay()){
+                    ordersLog.setSceneType("sync-disposable-rule");
+                }else {
+                    ordersLog.setSceneType("sync-part-rule");
+                }
+            }
 
+            //查询策略表
+            LambdaQueryWrapper<YhRiskEngineTetrad> queryWrapper = new LambdaQueryWrapper<YhRiskEngineTetrad>()
+                    .eq(YhRiskEngineTetrad::getCommercialId, "default");
+
+            if (ordersLog.getResourceType() != null) {
+                queryWrapper.eq(YhRiskEngineTetrad::getEventCode, ordersLog.getResourceType().toLowerCase());
+            }
+
+            if (ordersLog.getSceneType() != null) {
+                queryWrapper.eq(YhRiskEngineTetrad::getSceneCode, ordersLog.getSceneType().toLowerCase());
+            } else {
+                queryWrapper.eq(YhRiskEngineTetrad::getSceneCode, "default");
+            }
+
+            //第一次的queryWrapper
+            LambdaQueryWrapper<YhRiskEngineTetrad> cloneWrapper = queryWrapper.clone();
+            if (ordersLog.getBusinessType() != null) {
+                queryWrapper.eq(YhRiskEngineTetrad::getBusinessType, ordersLog.getBusinessType().toLowerCase());
+            }
+
+            YhRiskEngineTetrad selectOne = yhRiskEngineTetradMapper.selectOne(queryWrapper);
+            if (selectOne == null && !StringUtils.equals(ordersLog.getBusinessType(), "default")) {
+                cloneWrapper.eq(YhRiskEngineTetrad::getBusinessType, "default");
+            }
+
+            //第二次查询
+            selectOne = yhRiskEngineTetradMapper.selectOne(cloneWrapper);
+            System.out.println(selectOne.getStrategyId());
+//            ordersLogMapper.insert(ordersLog);
+        }
         originalStart = originalStart.plusSeconds(stepSecond);
         originalEnd = originalEnd.plusSeconds(stepSecond);
-
         System.out.println("循环结束");
     }
 

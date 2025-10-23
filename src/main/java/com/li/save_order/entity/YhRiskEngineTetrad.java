@@ -21,6 +21,6 @@ public class YhRiskEngineTetrad {
     private String sceneCode;
     @TableField(value = "event_code")
     private String eventCode;
-    @TableField(value = "businessType")
+    @TableField(value = "business_type")
     private String businessType;
 }

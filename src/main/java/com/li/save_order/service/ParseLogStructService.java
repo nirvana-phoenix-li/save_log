@@ -9,6 +9,8 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -132,6 +134,13 @@ public class ParseLogStructService {
                 laterString = "{\"" + laterString + "}";
                 OrdersLog laterTreasure = JSONObject.parseObject(laterString, OrdersLog.class);
                 ordersLogStruct.updateUserFromDto(laterTreasure, ordersLog);
+
+                //设置请求时间戳
+                String[] timeSplit = endParts[1].split("\"datetime\":\"");
+                String datetimeString = timeSplit[1].split("\"")[0];
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS");
+                LocalDateTime dateTime = LocalDateTime.parse(datetimeString, formatter);
+                ordersLog.setDateTime(dateTime);
 
 
                 ordersLog.setRiskLevel(Integer.valueOf(responseInfo.get("riskLevel")));

@@ -146,7 +146,11 @@ public class OrdersLog {
     @TableField(value = "sceneType")
     private String sceneType;
 
+    @TableField(value = "dateTime")
+    private LocalDateTime dateTime;
 
+    @TableField(value = "couponCode")
+    private String couponCode;
 }
 
 
